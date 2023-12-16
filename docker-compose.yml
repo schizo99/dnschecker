@@ -1,0 +1,13 @@
+version: "3"
+services:
+  dnschecker:
+    image: schizo99/dnschecker:0.0.1
+    container_name: dnschecker
+    restart: always
+    environment:
+      - URL=${URL}
+      - API_SECRET=${API_SECRET}
+      - API_KEY=${API_KEY}
+      - CHAT_ID=${CHAT_ID}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - DNS_HOSTNAME=${DNS_HOSTNAME}
