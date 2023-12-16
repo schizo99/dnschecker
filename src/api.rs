@@ -1,34 +1,13 @@
-use std::env;
 use reqwest;
 use serde_json::Value;
 use std::time::Duration;
 
+use crate::vars;
 
 pub fn get_api() -> String{
-    let username = env::var("API_KEY");
-    let username = match username {
-        Ok(username) => username,
-        Err(e) => {
-            log::error!("API_KEY not found in environment variables: {}", e);
-            return String::new();
-        },
-    };
-    let password = env::var("API_SECRET");
-    let password = match password {
-        Ok(password) => password,
-        Err(e) => {
-            log::error!("API_KEY not found in environment variables: {}", e);
-            return String::new();
-        }
-    };
-    let url = env::var("URL");
-    let url = match url {
-        Ok(url) => url,
-        Err(e) => {
-            log::error!("URL not found in environment variables: {}", e);
-            return String::new();
-        }
-    };
+    let username = vars::var("API_KEY");
+    let password = vars::var("API_SECRET");
+    let url = vars::var("URL");
 
     let mut client_builder = reqwest::blocking::Client::builder();
     client_builder = client_builder.danger_accept_invalid_certs(true);

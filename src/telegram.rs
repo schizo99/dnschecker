@@ -5,18 +5,12 @@ use std::io::{Write, Read};
 use chrono::{Local, DateTime};
 use chrono::Duration as ChronoDuration;
 use std::env;
-
+use crate::vars;
 
 pub fn send_telegram(token: &str, router_ip: &str, dns_ip: &str) -> bool {
     let lockfile = env::var("LOCKFILE").unwrap_or("/tmp/telegram.lock".to_string());
-    let chat_id = env::var("CHAT_ID");
-    let chat_id = match chat_id {
-        Ok(chat_id) => chat_id,
-        Err(e) => {
-            log::error!("CHAT_ID not found in environment variables: {}", e);
-            return false;
-        },
-    };
+    let chat_id = vars::var("CHAT_ID");
+    
     let client = reqwest::blocking::Client::new();
     let url = format!("https://api.telegram.org/bot{}/sendMessage", &token);
     let text = format!("IP address mismatch between router and DNS server!\nRouter IP: {}\nDNS IP: {}", router_ip, dns_ip);

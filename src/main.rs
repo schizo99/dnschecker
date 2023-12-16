@@ -1,36 +1,18 @@
-use std::env;
 use std::thread;
 use std::time::Duration;
 mod api;
 mod dns;
 mod telegram;
-
+mod vars;
 fn main() {
     if std::env::var("RUST_LOG").is_err() {
         std::env::set_var("RUST_LOG", "INFO");
     }
     simple_logger::init_with_env().unwrap();
     log::info!("Starting DNS checker");
-    let token = env::var("TELEGRAM_BOT_TOKEN");
-    let token = match token {
-        Ok(token) => token,
-        Err(e) => {
-            log::error!(
-                "TELEGRAM_BOT_TOKEN not found in environment variables: {}",
-                e
-            );
-            return;
-        }
-    };
-    let hostname = env::var("DNS_HOSTNAME");
-    let hostname = match hostname {
-        Ok(hostname) => hostname,
-        Err(e) => {
-            log::error!("DNS_HOSTNAME not found in environment variables: {}", e);
-            return;
-        }
-    };
-
+    let token = vars::var("TELEGRAM_TOKEN");
+    let hostname = vars::var("DNS_HOSTNAME");
+    
     loop {
         let ip_address = dns::resolve_hostname(&hostname);
         if ip_address.is_empty() {
