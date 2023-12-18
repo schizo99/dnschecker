@@ -31,3 +31,15 @@ pub fn resolve_hostname(hostname: &str) -> String {
     };
 
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_resolve_hostname() {
+        let result = resolve_hostname("localhost");
+
+        assert_eq!(result, "127.0.0.1");
+    }
+}
