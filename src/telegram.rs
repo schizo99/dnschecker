@@ -160,6 +160,28 @@ mod tests {
         assert_eq!(result.unwrap(), "test response");
         mock.assert();
     }
+
+    #[test]
+    fn test_do_request() {
+        let server = MockServer::start();
+
+        // Create a mock for the endpoint
+        let mock = server.mock(|when, then| {
+            when.method("POST").path("/get");
+            then.status(403).body("test response");
+        });
+
+        let json = serde_json::json!({"chat_id": "111", "text": "text", "disable_notification": false}); // Define the json variable
+        let response = do_request(server.url("/get"), json).unwrap();
+
+        // Call the function with the Response object
+        let result = parse_response(response);
+
+        // Assert that the function returns the expected output
+        assert_eq!(result.unwrap(), "test response");
+        mock.assert();
+    }
+
     #[test]
     fn test_parse_json() {
         // Call the function with a JSON string that has "ok": true
