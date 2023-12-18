@@ -137,9 +137,9 @@ pub fn read_timestamp_from_file(lockfile: &str) -> bool {
 mod tests {
     use super::*;
     use chrono::offset::TimeZone;
+    use httpmock::MockServer;
     use std::fs::File;
     use std::io::Write;
-    use httpmock::MockServer;
     #[test]
     fn test_parse_response() {
         let server = MockServer::start();
@@ -150,7 +150,8 @@ mod tests {
             then.status(200).body("test response");
         });
 
-        let json = serde_json::json!({"chat_id": "111", "text": "text", "disable_notification": false}); // Define the json variable
+        let json =
+            serde_json::json!({"chat_id": "111", "text": "text", "disable_notification": false}); // Define the json variable
         let response = do_request(server.url("/get"), json).unwrap();
 
         // Call the function with the Response object
@@ -171,7 +172,8 @@ mod tests {
             then.status(403).body("test response");
         });
 
-        let json = serde_json::json!({"chat_id": "111", "text": "text", "disable_notification": false}); // Define the json variable
+        let json =
+            serde_json::json!({"chat_id": "111", "text": "text", "disable_notification": false}); // Define the json variable
         let response = do_request(server.url("/get"), json).unwrap();
 
         // Call the function with the Response object
