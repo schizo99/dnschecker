@@ -1,9 +1,9 @@
+use crate::vars::get_var_from_env;
 use reqwest;
 use serde_json::Value;
 use std::time::Duration;
-use crate::vars::get_var_from_env;
 
-pub fn get_api() -> String{
+pub fn get_api() -> String {
     let username: String = get_var_from_env("API_KEY").unwrap();
     let password: String = get_var_from_env("API_SECRET").unwrap();
     let url: String = get_var_from_env("URL").unwrap();
@@ -63,9 +63,18 @@ fn get_response(response: reqwest::blocking::Response) -> Result<String, String>
     Ok(response_text)
 }
 
-fn call_endpoint(client: reqwest::blocking::Client, url: String, username: String, password: String) -> Result<reqwest::blocking::Response, String> {
+fn call_endpoint(
+    client: reqwest::blocking::Client,
+    url: String,
+    username: String,
+    password: String,
+) -> Result<reqwest::blocking::Response, String> {
     let timeout_duration = Duration::from_secs(10);
-    let response = client.get(&url).basic_auth(username, Some(password)).timeout(timeout_duration).send();
+    let response = client
+        .get(&url)
+        .basic_auth(username, Some(password))
+        .timeout(timeout_duration)
+        .send();
     let response = match response {
         Ok(response) => response,
         Err(e) => {
@@ -102,7 +111,8 @@ mod tests {
         // Create a mock for the endpoint
         let mock = server.mock(|when, then| {
             when.method("GET").path("/test");
-            then.status(200).body("{\"igb3\": {\"ipv4\": [{\"ipaddr\": \"127.0.0.1\"}]}}");
+            then.status(200)
+                .body("{\"igb3\": {\"ipv4\": [{\"ipaddr\": \"127.0.0.1\"}]}}");
         });
         std::env::set_var("API_KEY", "username");
         std::env::set_var("API_SECRET", "password");
@@ -116,12 +126,13 @@ mod tests {
         // Assert that the mock was called
         mock.assert();
     }
-    
 
-     #[test]
+    #[test]
     fn test_parse_json() {
         // Call the function with a JSON string that has the expected structure
-        let result = parse_json(String::from("{\"igb3\": {\"ipv4\": [{\"ipaddr\": \"192.168.1.1\"}]}}"));
+        let result = parse_json(String::from(
+            "{\"igb3\": {\"ipv4\": [{\"ipaddr\": \"192.168.1.1\"}]}}",
+        ));
 
         // Assert that the function returns the expected output
         assert_eq!(result, "192.168.1.1");
@@ -144,7 +155,13 @@ mod tests {
 
         // Call the function with the mock server's URL
         let client = reqwest::blocking::Client::new();
-        let result = call_endpoint(client, server.url("/test"), String::from("username"), String::from("password")).unwrap();
+        let result = call_endpoint(
+            client,
+            server.url("/test"),
+            String::from("username"),
+            String::from("password"),
+        )
+        .unwrap();
         let result = get_response(result);
 
         // Assert that the function returns the expected output
@@ -168,7 +185,12 @@ mod tests {
 
         // Call the function with the mock server's URL
         let client = reqwest::blocking::Client::new();
-        let result = call_endpoint(client, server.url("/test"), String::from("username"), String::from("password")); // Add timeout_duration argument
+        let result = call_endpoint(
+            client,
+            server.url("/test"),
+            String::from("username"),
+            String::from("password"),
+        ); // Add timeout_duration argument
 
         // Assert that the function returns the expected output
         assert!(result.is_ok());

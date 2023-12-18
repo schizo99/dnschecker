@@ -78,7 +78,7 @@ fn init() {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_init() {
         // Call the function
