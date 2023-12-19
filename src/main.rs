@@ -23,7 +23,7 @@ fn verify_env_vars() -> (String, String) {
     get_var_from_env("URL").unwrap_or_else(|_| std::process::exit(1));
     get_var_from_env("CHAT_ID").unwrap_or_else(|_| std::process::exit(1));
     get_var_from_env("INTERFACE").unwrap_or_else(|_| std::process::exit(1));
-    (token, hostname)
+    (hostname, token)
 }
 
 fn verify_ips(hostname: &String, token: &String) {
