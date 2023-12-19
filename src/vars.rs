@@ -6,7 +6,7 @@ pub fn get_var_from_env(name: &str) -> Result<String, VarError> {
         Ok(value) => Ok(value),
         Err(e) => {
             log::error!("{} not found in environment variables: {}", name, e);
-            return Err(e);
+            Err(e)
         }
     }
 }
