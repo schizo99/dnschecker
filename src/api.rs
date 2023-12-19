@@ -56,7 +56,7 @@ fn get_response(response: reqwest::blocking::Response) -> Result<String, String>
     let response_text = match response_text {
         Ok(response_text) => response_text,
         Err(e) => {
-            log::warn!("Failed to get response text: {:?}", e);
+            log::warn!("Failed to get response text: {}", e);
             return Err(String::new());
         }
     };
@@ -78,7 +78,7 @@ fn call_endpoint(
     let response = match response {
         Ok(response) => response,
         Err(e) => {
-            log::warn!("Failed to make HTTPS request: {:?}", e);
+            log::warn!("Failed to make HTTPS request: {}", e);
             return Err(String::new());
         }
     };

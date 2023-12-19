@@ -9,27 +9,23 @@ use crate::vars::*;
 
 fn main() {
     init();
-    verify_env_vars();
-    let token = get_var_from_env("TELEGRAM_TOKEN").unwrap();
-    let hostname = get_var_from_env("DNS_HOSTNAME").unwrap();
+    let (hostname, token) = verify_env_vars();
     loop {
         verify_ips(&hostname, &token);
     }
 }
-fn verify_env_vars() {
+fn verify_env_vars() -> (String, String) {
     let token = get_var_from_env("TELEGRAM_TOKEN").unwrap_or_else(|_| std::process::exit(1));
     let hostname = get_var_from_env("DNS_HOSTNAME").unwrap_or_else(|_| std::process::exit(1));
-    let username: String = get_var_from_env("API_KEY").unwrap_or_else(|_| std::process::exit(1));
-    let password: String = get_var_from_env("API_SECRET").unwrap_or_else(|_| std::process::exit(1));
-    let url: String = get_var_from_env("URL").unwrap_or_else(|_| std::process::exit(1));
-    let chat_id = get_var_from_env("CHAT_ID").unwrap_or_else(|_| std::process::exit(1));
 
     log::debug!("TELEGRAM_TOKEN: {}", token);
     log::debug!("DNS_HOSTNAME: {}", hostname);
-    log::debug!("API_KEY: {}", username);
-    log::debug!("API_SECRET: {}", password);
-    log::debug!("URL: {}", url);
-    log::debug!("CHAT_ID: {}", chat_id);
+    log::debug!("API_KEY: {}",  get_var_from_env("API_KEY").unwrap_or_else(|_| std::process::exit(1)));
+    log::debug!("API_SECRET: {}", get_var_from_env("API_SECRET").unwrap_or_else(|_| std::process::exit(1)));
+    log::debug!("URL: {}", get_var_from_env("URL").unwrap_or_else(|_| std::process::exit(1)));
+    log::debug!("CHAT_ID: {}", get_var_from_env("CHAT_ID").unwrap_or_else(|_| std::process::exit(1)));
+
+    (token, hostname)
 }
 
 fn verify_ips(hostname: &String, token: &String) {
@@ -43,7 +39,7 @@ fn verify_ips(hostname: &String, token: &String) {
     }
 
     log::info!(
-        "The IP address of {} is: {:?}, WAP IP address is: {:?}",
+        "The IP address of {} is: {}, WAP IP address is: {}",
         hostname,
         ip_address,
         wan_ip
