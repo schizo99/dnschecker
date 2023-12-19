@@ -20,6 +20,8 @@ It queries the opnsense API to check which WAN ip is assigned and the correspond
 
 - `DNS_HOSTNAME`: This variable should be set to the DNS hostname that will be looked up.
 
+- `INTERFACE`: This variable should be set to the interface of your opnsense router that will be looked up.
+
 ## Setting Environment Variables
 
 Environment variables can be set in various ways depending on your operating system and shell. Here are examples for Bash and PowerShell:
@@ -34,4 +36,5 @@ export URL=your_api_url
 export API_KEY=your_api_key
 export API_SECRET=your_api_secret
 export DNS_HOSTNAME=your_hostname
+export INTERFACE=igb3
 ```

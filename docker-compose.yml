@@ -1,7 +1,7 @@
 version: "3"
 services:
   dnschecker:
-    image: schizo99/dnschecker:0.0.1
+    image: schizo99/dnschecker:0.0.4
     container_name: dnschecker
     restart: always
     environment:
@@ -11,3 +11,4 @@ services:
       - CHAT_ID=${CHAT_ID}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - DNS_HOSTNAME=${DNS_HOSTNAME}
+      - INTERFACE=igb3

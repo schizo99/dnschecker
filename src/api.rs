@@ -6,6 +6,7 @@ use std::time::Duration;
 pub fn get_api() -> String {
     let username: String = get_var_from_env("API_KEY").unwrap();
     let password: String = get_var_from_env("API_SECRET").unwrap();
+    let interface: String = get_var_from_env("INTERFACE").unwrap();
     let url: String = get_var_from_env("URL").unwrap();
 
     let client = match build_client() {
@@ -21,10 +22,10 @@ pub fn get_api() -> String {
         Err(value) => return value,
     };
 
-    parse_json(response_text)
+    parse_json(response_text, &interface)
 }
 
-fn parse_json(response_text: String) -> String {
+fn parse_json(response_text: String, interface: &str) -> String {
     let json: Value = match serde_json::from_str(&response_text) {
         Ok(json) => json,
         Err(e) => {
@@ -32,11 +33,11 @@ fn parse_json(response_text: String) -> String {
             return String::new();
         }
     };
-    let value = json.get("igb3");
+    let value = json.get(interface);
     let value = match value {
         Some(value) => value.get("ipv4"),
         None => {
-            log::warn!("Failed to get \"igb3\" from JSON");
+            log::warn!("Failed to get \"{}\" from JSON", interface);
             return String::new();
         }
     };
@@ -129,16 +130,17 @@ mod tests {
 
     #[test]
     fn test_parse_json() {
+        let interface = "igb3";
         // Call the function with a JSON string that has the expected structure
-        let result = parse_json(String::from(
-            "{\"igb3\": {\"ipv4\": [{\"ipaddr\": \"192.168.1.1\"}]}}",
-        ));
+        let result = parse_json(
+            String::from("{\"igb3\": {\"ipv4\": [{\"ipaddr\": \"192.168.1.1\"}]}}"),
+            interface,
+        );
 
         // Assert that the function returns the expected output
         assert_eq!(result, "192.168.1.1");
-
         // Call the function with a JSON string that does not have the expected structure
-        let result = parse_json(String::from("{\"foo\": \"bar\"}"));
+        let result = parse_json(String::from("{\"foo\": \"bar\"}"), interface);
 
         // Assert that the function returns an empty string
         assert_eq!(result, "");

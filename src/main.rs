@@ -18,25 +18,11 @@ fn verify_env_vars() -> (String, String) {
     let token = get_var_from_env("TELEGRAM_TOKEN").unwrap_or_else(|_| std::process::exit(1));
     let hostname = get_var_from_env("DNS_HOSTNAME").unwrap_or_else(|_| std::process::exit(1));
 
-    log::debug!("TELEGRAM_TOKEN: {}", token);
-    log::debug!("DNS_HOSTNAME: {}", hostname);
-    log::debug!(
-        "API_KEY: {}",
-        get_var_from_env("API_KEY").unwrap_or_else(|_| std::process::exit(1))
-    );
-    log::debug!(
-        "API_SECRET: {}",
-        get_var_from_env("API_SECRET").unwrap_or_else(|_| std::process::exit(1))
-    );
-    log::debug!(
-        "URL: {}",
-        get_var_from_env("URL").unwrap_or_else(|_| std::process::exit(1))
-    );
-    log::debug!(
-        "CHAT_ID: {}",
-        get_var_from_env("CHAT_ID").unwrap_or_else(|_| std::process::exit(1))
-    );
-
+    get_var_from_env("API_KEY").unwrap_or_else(|_| std::process::exit(1));
+    get_var_from_env("API_SECRET").unwrap_or_else(|_| std::process::exit(1));
+    get_var_from_env("URL").unwrap_or_else(|_| std::process::exit(1));
+    get_var_from_env("CHAT_ID").unwrap_or_else(|_| std::process::exit(1));
+    get_var_from_env("INTERFACE").unwrap_or_else(|_| std::process::exit(1));
     (token, hostname)
 }
 
