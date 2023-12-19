@@ -116,6 +116,7 @@ mod tests {
                 .body("{\"igb3\": {\"ipv4\": [{\"ipaddr\": \"127.0.0.1\"}]}}");
         });
         std::env::set_var("API_KEY", "username");
+        std::env::set_var("INTERFACE", "igb3");
         std::env::set_var("API_SECRET", "password");
         std::env::set_var("URL", server.url("/test"));
         // Call the function with the mock server's URL
