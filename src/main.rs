@@ -10,23 +10,40 @@ use crate::vars::*;
 fn main() {
     init();
     let (hostname, token) = verify_env_vars();
+    let mut counter: i32 = 1;
     loop {
-        verify_ips(&hostname, &token);
+        counter = verify_ips(&hostname, &token, counter);
     }
 }
-fn verify_env_vars() -> (String, String) {
-    let token = get_var_from_env("TELEGRAM_TOKEN").unwrap_or_else(|_| std::process::exit(1));
-    let hostname = get_var_from_env("DNS_HOSTNAME").unwrap_or_else(|_| std::process::exit(1));
 
-    get_var_from_env("API_KEY").unwrap_or_else(|_| std::process::exit(1));
-    get_var_from_env("API_SECRET").unwrap_or_else(|_| std::process::exit(1));
-    get_var_from_env("URL").unwrap_or_else(|_| std::process::exit(1));
-    get_var_from_env("CHAT_ID").unwrap_or_else(|_| std::process::exit(1));
-    get_var_from_env("INTERFACE").unwrap_or_else(|_| std::process::exit(1));
+fn verify_env_vars() -> (String, String) {
+    let envvars: Vec<&str> = vec![
+        "TELEGRAM_TOKEN",
+        "DNS_HOSTNAME",
+        "API_KEY",
+        "API_SECRET",
+        "URL",
+        "CHAT_ID",
+        "INTERFACE",
+    ];
+
+    let error: bool = get_vars_from_env(envvars);
+    if error {
+        log::error!("One or more environment variables are missing");
+        std::process::exit(1);
+    }
+    let token: String =
+        get_var_from_env("TELEGRAM_TOKEN").unwrap_or_else(|_| std::process::exit(1));
+    let hostname: String =
+        get_var_from_env("DNS_HOSTNAME").unwrap_or_else(|_| std::process::exit(1));
+
     (hostname, token)
 }
 
-fn verify_ips(hostname: &String, token: &String) {
+fn verify_ips(hostname: &String, token: &String, counter: i32) -> i32 {
+    if counter == 0 {
+        log::info!("Verifying IPs");
+    }
     let ip_address = dns::resolve_hostname(hostname);
     if ip_address.is_empty() {
         log::warn!("Failed to get IP address");
@@ -36,8 +53,8 @@ fn verify_ips(hostname: &String, token: &String) {
         log::warn!("Failed to get WAN IP address");
     }
 
-    log::info!(
-        "The IP address of {} is: {}, WAP IP address is: {}",
+    log::debug!(
+        "The IP address of {} is: {}, WAN IP address is: {}",
         hostname,
         ip_address,
         wan_ip
@@ -54,11 +71,20 @@ fn verify_ips(hostname: &String, token: &String) {
                     log::info!("Telegram sent");
                 }
             }
+        } else {
+            if !telegram::send_telegram(token, &ip_address, &wan_ip) {
+                log::warn!("Failed to send successful update telegram");
+            }
         }
     }
-    log::info!("Sleeping for 30 minutes");
-    thread::sleep(Duration::from_secs(1800));
-    // Sleep for 30 minutes
+    log::debug!("Sleeping for 10 seconds");
+    thread::sleep(Duration::from_secs(10));
+    let counter: i32 = counter + 1;
+    if counter >= 180 {
+        log::info!("30 minutes passed");
+        return 1;
+    }
+    counter
 }
 
 fn init() {

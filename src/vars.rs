@@ -11,6 +11,23 @@ pub fn get_var_from_env(name: &str) -> Result<String, VarError> {
     }
 }
 
+pub fn get_vars_from_env(names: Vec<&str>) -> bool {
+    let mut error = false;
+    for name in names {
+        let result = match std::env::var(name) {
+            Ok(value) => Ok(value),
+            Err(e) => {
+                log::error!("{} not found in environment variables: {}", name, e);
+                Err(e)
+            }
+        };
+        if result.is_err() {
+            error = true;
+        }
+    }
+    error
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

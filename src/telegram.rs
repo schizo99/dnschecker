@@ -21,19 +21,56 @@ pub fn send_telegram(token: &str, router_ip: &str, dns_ip: &str) -> bool {
 
     if alarm_sent {
         log::info!("Alarm already sent: {:?}", !alarm_sent);
+        if router_ip == dns_ip {
+            log::debug!("IP addresses are the same again, resetting alarm");
+            match reset_alarm(&lockfile, &chat_id, url) {
+                Ok(value) => value,
+                Err(value) => value,
+            };
+            return true;
+        }
         false
     } else {
-        log::info!("Sending alarm: {:?}", !alarm_sent);
-        let response = match do_request(url, json) {
-            Ok(value) => value,
-            Err(value) => return value,
-        };
-        let response_text = match parse_response(response) {
-            Ok(value) => value,
-            Err(value) => return value,
-        };
+        if router_ip != dns_ip {
+            log::info!("Sending alarm: {:?}", !alarm_sent);
+            let response = match do_request(url, json) {
+                Ok(value) => value,
+                Err(value) => return value,
+            };
+            let response_text = match parse_response(response) {
+                Ok(value) => value,
+                Err(value) => return value,
+            };
+            create_timestamp(&lockfile);
+            parse_json(response_text)
+        } else {
+            log::trace!("IP addresses are the same, not sending alarm");
+            true
+        }
+    }
+}
 
-        parse_json(response_text)
+fn reset_alarm(lockfile: &str, chat_id: &str, url: String) -> Result<String, String> {
+    let json = serde_json::json!({"chat_id": chat_id, "text": "IP addresses are the same again", "disable_notification": false}); // Define the json variable
+    let response = match do_request(url, json) {
+        Ok(value) => value,
+        Err(_) => return Err("failed to send reset alarm".to_string()),
+    };
+    let response_text = match parse_response(response) {
+        Ok(value) => value,
+        Err(_) => return Err("failed to parse response".to_string()),
+    };
+    let result = parse_json(response_text);
+    if result {
+        log::info!("Alarm has been reset");
+        match reset_lockfile(lockfile) {
+            Ok(value) => value,
+            Err(value) => return Err(value.into()),
+        };
+        Ok("Alarm has been reset".to_string())
+    } else {
+        log::warn!("Failed to reset alarm");
+        Err("Failed to reset alarm".to_string())
     }
 }
 
@@ -101,6 +138,13 @@ fn create_timestamp(lockfile: &str) {
     }
 }
 
+fn reset_lockfile(lockfile: &str) -> Result<String, String> {
+    match std::fs::remove_file(lockfile) {
+        Ok(_) => Ok("Lockfile reset".to_string()),
+        Err(e) => Err(format!("Failed to reset lockfile: {:?}", e)),
+    }
+}
+
 pub fn read_timestamp_from_file(lockfile: &str) -> bool {
     if let Ok(mut file) = File::open(lockfile) {
         let mut contents = String::new();
@@ -117,18 +161,15 @@ pub fn read_timestamp_from_file(lockfile: &str) -> bool {
                 log::info!("Less than 24 hours since last alarm, not sending alarm!");
                 true
             } else {
-                create_timestamp(lockfile);
                 log::info!("More than 24 hours since last alarm, sending alarm!");
                 false
             }
         } else {
             log::info!("Failed to parse timestamp, creating new timestamp file");
-            create_timestamp(lockfile);
             false
         }
     } else {
-        log::info!("No lockfile found, creating new timestamp file");
-        create_timestamp(lockfile);
+        log::debug!("No lockfile found, alarm not previously sent");
         false
     }
 }
