@@ -26,7 +26,11 @@ pub fn resolve_hostname(hostname: &str) -> String {
             return ipv4_address;
         }
         Err(err) => {
-            log::warn!("Failed to lookup IP address: {}", err);
+            log::warn!(
+                "Failed to lookup IP address: {} for hostname: {}",
+                err,
+                hostname
+            );
             return String::new();
         }
     };
