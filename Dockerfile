@@ -23,15 +23,17 @@ COPY ./src ./src
 
 # Build for release.
 #RUN cargo build --target aarch64-unknown-linux-gnu --release
-RUN cargo build --release
+RUN RUSTFLAGS="-C target-feature=+crt-static" cargo build --release --target x86_64-unknown-linux-gnu
 
 # Second stage: Copy the binary from the first stage
-FROM debian:buster-slim
+#FROM debian:buster-slim
 
-RUN apt update && apt install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
+#RUN apt update && apt install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
+
+FROM scratch
 
 #COPY --from=builder /usr/src/target/aarch64-unknown-linux-gnu/release/dnschecker /dnschecker
-COPY --from=builder /usr/src/target/release/dnschecker /dnschecker
+COPY --from=builder /usr/src/target/x86_64-unknown-linux-gnu/release/dnschecker /dnschecker
 COPY --from=builder /etc/passwd /etc/passwd
 
 USER guest
