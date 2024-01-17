@@ -3,6 +3,17 @@ use reqwest;
 use serde_json::Value;
 use std::time::Duration;
 
+/// Makes an API request and parses the response.
+///
+/// This function retrieves the values of the "API_KEY", "API_SECRET", "INTERFACE", and "URL" environment variables.
+/// It then builds a `reqwest::Client` and makes a request to the endpoint specified by the "URL" environment variable.
+/// The response is then parsed into a JSON object.
+/// The function then retrieves the "ipv4" field of the object specified by the "INTERFACE" environment variable from the JSON object.
+///
+/// # Returns
+///
+/// * A `String` that holds the value of the "ipv4" field of the object specified by the "INTERFACE" environment variable.
+/// * If any step fails, it returns an empty `String`.
 pub fn get_api() -> String {
     let username: String = get_var_from_env("API_KEY").unwrap();
     let password: String = get_var_from_env("API_SECRET").unwrap();
@@ -25,6 +36,28 @@ pub fn get_api() -> String {
     parse_json(response_text, &interface)
 }
 
+/// Parses a JSON string and extracts a specific value from it.
+///
+/// This function takes a JSON string and the name of an interface as arguments.
+/// It attempts to parse the JSON string into a `serde_json::Value` object using the `serde_json::from_str` function.
+/// If the parsing fails, it logs a warning and returns an empty `String`.
+///
+/// It then attempts to get the value of the object specified by the interface from the `serde_json::Value` object.
+/// If the object does not exist, it logs a warning and returns an empty `String`.
+///
+/// Finally, it attempts to get the "ipv4" field of the object.
+/// If the "ipv4" field does not exist, it logs a warning and returns an empty `String`.
+/// If the "ipv4" field exists, it returns its value as a `String`.
+///
+/// # Arguments
+///
+/// * `response_text`: A `String` that holds the JSON string to parse.
+/// * `interface`: A `&str` that specifies the name of the interface to get the value from.
+///
+/// # Returns
+///
+/// * A `String` that holds the value of the "ipv4" field of the object specified by the interface.
+/// * If any step fails, it returns an empty `String`.
 fn parse_json(response_text: String, interface: &str) -> String {
     let json: Value = match serde_json::from_str(&response_text) {
         Ok(json) => json,
@@ -52,6 +85,20 @@ fn parse_json(response_text: String, interface: &str) -> String {
     value.as_str().unwrap().to_string()
 }
 
+/// Extracts the body of an HTTP response as a string.
+///
+/// This function takes a `reqwest::blocking::Response` object as an argument.
+/// It attempts to get the body of the response as a string using the `reqwest::blocking::Response::text` method.
+/// If the method fails, it logs a warning and returns an `Err` with an empty `String`.
+///
+/// # Arguments
+///
+/// * `response`: A `reqwest::blocking::Response` object that represents the HTTP response.
+///
+/// # Returns
+///
+/// * A `Result<String, String>` that holds the body of the response as a `String` if the method succeeds.
+/// * If the method fails, it returns an `Err` with an empty `String`.
 fn get_response(response: reqwest::blocking::Response) -> Result<String, String> {
     let response_text = response.text();
     let response_text = match response_text {
@@ -64,6 +111,26 @@ fn get_response(response: reqwest::blocking::Response) -> Result<String, String>
     Ok(response_text)
 }
 
+/// Makes an HTTP request to a specified endpoint and returns the response.
+///
+/// This function takes a `reqwest::blocking::Client`, a URL, a username, and a password as arguments.
+/// It sets a timeout of 10 seconds for the request using the `reqwest::blocking::RequestBuilder::timeout` method.
+/// It then makes a GET request to the specified URL using the `reqwest::blocking::RequestBuilder::get` method.
+/// It sets the username and password for basic authentication using the `reqwest::blocking::RequestBuilder::basic_auth` method.
+/// It sends the request and gets the response using the `reqwest::blocking::RequestBuilder::send` method.
+/// If the method fails, it logs a warning and returns an `Err` with an empty `String`.
+///
+/// # Arguments
+///
+/// * `client`: A `reqwest::blocking::Client` that is used to make the request.
+/// * `url`: A `String` that specifies the URL of the endpoint.
+/// * `username`: A `String` that specifies the username for basic authentication.
+/// * `password`: A `String` that specifies the password for basic authentication.
+///
+/// # Returns
+///
+/// * A `Result<reqwest::blocking::Response, String>` that holds the response if the request succeeds.
+/// * If the request fails, it returns an `Err` with an empty `String`.
 fn call_endpoint(
     client: reqwest::blocking::Client,
     url: String,
@@ -86,6 +153,17 @@ fn call_endpoint(
     Ok(response)
 }
 
+/// Creates a new `reqwest::blocking::Client` instance with certain configurations.
+///
+/// This function first creates a `reqwest::blocking::ClientBuilder` instance using the `reqwest::blocking::Client::builder` method.
+/// It then configures the builder to accept invalid certificates using the `reqwest::blocking::ClientBuilder::danger_accept_invalid_certs` method.
+/// It builds the `reqwest::blocking::Client` instance using the `reqwest::blocking::ClientBuilder::build` method.
+/// If the method fails, it logs a warning and returns an `Err` with an empty `String`.
+///
+/// # Returns
+///
+/// * A `Result<reqwest::blocking::Client, String>` that holds the `reqwest::blocking::Client` instance if the method succeeds.
+/// * If the method fails, it returns an `Err` with an empty `String`.
 fn build_client() -> Result<reqwest::blocking::Client, String> {
     let mut client_builder = reqwest::blocking::Client::builder();
     client_builder = client_builder.danger_accept_invalid_certs(true);

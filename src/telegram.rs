@@ -7,49 +7,84 @@ use std::fs::File;
 use std::io::{Read, Write};
 use std::time::Duration;
 
+/// Sends a message to a Telegram chat when there is an IP address mismatch between the router and the DNS server.
+///
+/// This function takes a Telegram bot token, a router IP address, and a DNS server IP address as arguments.
+/// It first retrieves the lockfile path and chat ID from environment variables.
+/// It then constructs the URL for the Telegram API and the text of the message.
+/// It checks if an alarm has already been sent by reading the timestamp from the lockfile.
+/// If an alarm has already been sent and the IP addresses are the same again, it resets the alarm.
+/// If an alarm has not been sent and the IP addresses are different, it sends an alarm.
+///
+/// # Arguments
+///
+/// * `token`: A `&str` that specifies the Telegram bot token.
+/// * `router_ip`: A `&str` that specifies the router IP address.
+/// * `dns_ip`: A `&str` that specifies the DNS server IP address.
+///
+/// # Returns
+///
+/// * A `bool` that indicates whether the function succeeded.
+/// * If the function succeeds, it returns `true`.
+/// * If the function fails, it returns `false`.
 pub fn send_telegram(token: &str, router_ip: &str, dns_ip: &str) -> bool {
     let lockfile = env::var("LOCKFILE").unwrap_or("/tmp/telegram.lock".to_string());
     let chat_id = get_var_from_env("CHAT_ID").unwrap();
-
     let url = format!("https://api.telegram.org/bot{}/sendMessage", &token);
     let text = format!(
         "IP address mismatch between router and DNS server!\nRouter IP: {}\nDNS IP: {}",
         router_ip, dns_ip
     );
-    let json = serde_json::json!({"chat_id": chat_id, "text": text, "disable_notification": false}); // Define the json variable
+    let json = serde_json::json!({"chat_id": chat_id, "text": text, "disable_notification": false});
+
     let alarm_sent = read_timestamp_from_file(&lockfile);
 
-    if alarm_sent {
-        log::info!("Alarm already sent: {:?}", !alarm_sent);
-        if router_ip == dns_ip {
-            log::debug!("IP addresses are the same again, resetting alarm");
-            match reset_alarm(&lockfile, &chat_id, url) {
-                Ok(value) => value,
-                Err(value) => value,
-            };
-            return true;
-        }
-        false
-    } else {
-        if router_ip != dns_ip {
-            log::info!("Sending alarm: {:?}", !alarm_sent);
-            let response = match do_request(url, json) {
-                Ok(value) => value,
-                Err(value) => return value,
-            };
-            let response_text = match parse_response(response) {
-                Ok(value) => value,
-                Err(value) => return value,
-            };
-            create_timestamp(&lockfile);
-            parse_json(response_text)
+    if alarm_sent && router_ip == dns_ip {
+        log::debug!("IP addresses are the same again, resetting alarm");
+        reset_alarm(&lockfile, &chat_id, url).is_ok()
+    } else if !alarm_sent && router_ip != dns_ip {
+        log::info!("Sending alarm");
+        if let Ok(response) = do_request(url, json) {
+            if let Ok(response_text) = parse_response(response) {
+                create_timestamp(&lockfile);
+                parse_json(response_text)
+            } else {
+                false
+            }
         } else {
-            log::trace!("IP addresses are the same, not sending alarm");
-            true
+            false
         }
+    } else {
+        log::trace!("IP addresses are the same, not sending alarm");
+        true
     }
 }
 
+/// Sends a reset message to a Telegram chat when the IP addresses of the router and the DNS server are the same again.
+///
+/// This function takes the lockfile path, chat ID, and the URL for the Telegram API as arguments.
+/// It first constructs the JSON payload for the Telegram API request, which includes the chat ID, the text of the message, and a flag to disable notification.
+/// It then sends the request to the Telegram API using the `do_request` function.
+/// If the function fails, it logs a warning and returns an `Err` with a message.
+///
+/// It then parses the response from the Telegram API using the `parse_response` function.
+/// If the function fails, it logs a warning and returns an `Err` with a message.
+///
+/// It then parses the JSON response from the Telegram API using the `parse_json` function.
+/// If the function fails, it logs a warning and returns an `Err` with a message.
+///
+/// If the function succeeds, it logs an info message, resets the lockfile using the `reset_lockfile` function, and returns an `Ok` with a message.
+///
+/// # Arguments
+///
+/// * `lockfile`: A `&str` that specifies the lockfile path.
+/// * `chat_id`: A `&str` that specifies the chat ID.
+/// * `url`: A `String` that specifies the URL for the Telegram API.
+///
+/// # Returns
+///
+/// * A `Result<String, String>` that holds a message if the function succeeds.
+/// * If the function fails, it returns an `Err` with a message.
 fn reset_alarm(lockfile: &str, chat_id: &str, url: String) -> Result<String, String> {
     let json = serde_json::json!({"chat_id": chat_id, "text": "IP addresses are the same again", "disable_notification": false}); // Define the json variable
     let response = match do_request(url, json) {
@@ -74,6 +109,28 @@ fn reset_alarm(lockfile: &str, chat_id: &str, url: String) -> Result<String, Str
     }
 }
 
+/// Parses a JSON string and extracts the value of the "ok" field.
+///
+/// This function takes a JSON string as an argument.
+/// It attempts to parse the JSON string into a `serde_json::Value` using the `serde_json::from_str` function.
+/// If the function fails, it logs a warning and returns `false`.
+///
+/// It then attempts to get the value of the "ok" field from the `serde_json::Value` using the `Value::get` method.
+/// If the function fails, it logs a warning and returns `false`.
+///
+/// It then attempts to convert the value of the "ok" field to a `bool` using the `Value::as_bool` method.
+/// If the function fails, it logs a warning and returns `false`.
+///
+/// If all steps succeed, it returns the value of the "ok" field as a `bool`.
+///
+/// # Arguments
+///
+/// * `response_text`: A `String` that specifies the JSON string to parse.
+///
+/// # Returns
+///
+/// * A `bool` that holds the value of the "ok" field if the function succeeds.
+/// * If any step fails, it returns `false`.
 fn parse_json(response_text: String) -> bool {
     let json: Value = match serde_json::from_str(&response_text) {
         Ok(json) => json,
@@ -94,6 +151,22 @@ fn parse_json(response_text: String) -> bool {
     ok
 }
 
+/// Extracts the text from an HTTP response.
+///
+/// This function takes an HTTP response as an argument.
+/// It attempts to extract the text from the HTTP response using the `reqwest::blocking::Response::text` method.
+/// If the method fails, it logs a warning and returns an `Err` with `false`.
+///
+/// If the method succeeds, it returns an `Ok` with the text of the HTTP response.
+///
+/// # Arguments
+///
+/// * `response`: A `reqwest::blocking::Response` that specifies the HTTP response to extract the text from.
+///
+/// # Returns
+///
+/// * A `Result<String, bool>` that holds the text of the HTTP response if the function succeeds.
+/// * If the function fails, it returns an `Err` with `false`.
 fn parse_response(response: reqwest::blocking::Response) -> Result<String, bool> {
     let response_text = response.text();
     let response_text = match response_text {
@@ -106,6 +179,25 @@ fn parse_response(response: reqwest::blocking::Response) -> Result<String, bool>
     Ok(response_text)
 }
 
+/// Makes an HTTP POST request with a JSON payload.
+///
+/// This function takes a URL and a JSON value as arguments.
+/// It first creates a new `reqwest::blocking::Client`.
+/// It then sets the timeout duration for the request to 10 seconds.
+/// It then attempts to make the HTTP POST request using the `reqwest::blocking::Client::post` method, the `RequestBuilder::json` method to set the JSON payload, the `RequestBuilder::timeout` method to set the timeout duration, and the `RequestBuilder::send` method to send the request.
+/// If the method fails, it logs a warning and returns an `Err` with `false`.
+///
+/// If the method succeeds, it returns an `Ok` with the HTTP response.
+///
+/// # Arguments
+///
+/// * `url`: A `String` that specifies the URL to make the HTTP POST request to.
+/// * `json`: A `serde_json::Value` that specifies the JSON payload for the HTTP POST request.
+///
+/// # Returns
+///
+/// * A `Result<reqwest::blocking::Response, bool>` that holds the HTTP response if the function succeeds.
+/// * If the function fails, it returns an `Err` with `false`.
 fn do_request(url: String, json: Value) -> Result<reqwest::blocking::Response, bool> {
     let client = reqwest::blocking::Client::new();
     let timeout_duration = Duration::from_secs(10); // Set the timeout duration to 10 seconds
@@ -124,6 +216,20 @@ fn do_request(url: String, json: Value) -> Result<reqwest::blocking::Response, b
     Ok(response)
 }
 
+/// Creates a timestamp and writes it to a lockfile.
+///
+/// This function takes a lockfile path as an argument.
+/// It first creates a new file at the lockfile path using the `File::create` method.
+/// It then sets the length of the file to 0 using the `File::set_len` method to ensure that the file is empty.
+/// It then creates a timestamp using the `DateTime::to_rfc2822` method and the current local time.
+/// It then writes the timestamp to the file using the `Write::write_all` method.
+///
+/// If any step fails, it logs a warning.
+/// If all steps succeed, it logs an info message.
+///
+/// # Arguments
+///
+/// * `lockfile`: A `&str` that specifies the lockfile path.
 fn create_timestamp(lockfile: &str) {
     let mut file = File::create(lockfile).unwrap();
     match file.set_len(0) {
@@ -138,6 +244,22 @@ fn create_timestamp(lockfile: &str) {
     }
 }
 
+/// Removes a lockfile.
+///
+/// This function takes a lockfile path as an argument.
+/// It attempts to remove the file at the lockfile path using the `std::fs::remove_file` function.
+/// If the function fails, it logs a warning and returns an `Err` with a message.
+///
+/// If the function succeeds, it logs an info message and returns an `Ok` with a message.
+///
+/// # Arguments
+///
+/// * `lockfile`: A `&str` that specifies the lockfile path.
+///
+/// # Returns
+///
+/// * A `Result<String, String>` that holds a message if the function succeeds.
+/// * If the function fails, it returns an `Err` with a message.
 fn reset_lockfile(lockfile: &str) -> Result<String, String> {
     match std::fs::remove_file(lockfile) {
         Ok(_) => Ok("Lockfile reset".to_string()),
@@ -145,6 +267,29 @@ fn reset_lockfile(lockfile: &str) -> Result<String, String> {
     }
 }
 
+/// Reads a timestamp from a lockfile and checks if it's less than 24 hours old.
+///
+/// This function takes a lockfile path as an argument.
+/// It first attempts to open the file at the lockfile path using the `File::open` method.
+/// If the method fails, it logs a warning and returns `false`.
+///
+/// It then reads the contents of the file into a `String` using the `Read::read_to_string` method.
+/// If the method fails, it logs a warning and returns `false`.
+///
+/// It then attempts to parse the contents of the file into a `DateTime` using the `DateTime::parse_from_rfc2822` method.
+/// If the method fails, it logs a warning and returns `false`.
+///
+/// It then gets the current local time and checks if the duration since the timestamp is less than 24 hours.
+/// If it is, it logs an info message and returns `true`.
+/// If it's not, it logs an info message and returns `false`.
+///
+/// # Arguments
+///
+/// * `lockfile`: A `&str` that specifies the lockfile path.
+///
+/// # Returns
+///
+/// * A `bool` that indicates whether the timestamp is less than 24 hours old.
 pub fn read_timestamp_from_file(lockfile: &str) -> bool {
     if let Ok(mut file) = File::open(lockfile) {
         let mut contents = String::new();
