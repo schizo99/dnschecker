@@ -3,16 +3,33 @@ use std::time::Duration;
 mod api;
 mod dns;
 mod telegram;
+use signal_hook::consts::{SIGINT, SIGTERM};
+use signal_hook::iterator::Signals;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 mod vars;
 use crate::vars::*;
 
 fn main() {
+    let sig_received = Arc::new(AtomicBool::new(false));
+    let r = sig_received.clone();
+
+    // Set the SIGTERM and SIGINT handler
+    let mut signals = Signals::new(&[SIGTERM, SIGINT]).unwrap();
+    std::thread::spawn(move || {
+        for _ in signals.forever() {
+            r.store(true, Ordering::SeqCst);
+        }
+    });
     init();
     let (hostname, token) = verify_env_vars();
     let mut counter: i32 = 1;
     loop {
         counter = verify_ips(&hostname, &token, counter);
+        if sig_received.load(Ordering::SeqCst) {
+            break;
+        }
     }
 }
 
