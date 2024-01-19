@@ -1,7 +1,7 @@
 name: Build and push to dockerhub
 on:
-  push:
-    branches: [main]
+  release:
+    types: [released]
   workflow_dispatch:
 jobs:
   build-and-push:
@@ -22,24 +22,10 @@ jobs:
       with:
         images: schizo99/dnschecker
 
-    - name: Get Next Version
-      id: semver
-      uses: ietf-tools/semver-action@v1
-      with:
-        token: ${{ github.token }}
-        branch: main
-
-    - name: Create Release
-      uses: ncipollo/release-action@v1.12.0
-      with:
-        makeLatest: legacy
-        name: ${{ steps.semver.outputs.next }}
-        token: ${{ github.token }}
-
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
         context: .
         file: ./Dockerfile
         push: true
-        tags: schizo99/dnschecker:${{ steps.semver.outputs.nextStrict }},schizo99/dnschecker:latest
+        tags: ${{ steps.meta.outputs.tags }}
