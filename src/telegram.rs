@@ -418,7 +418,9 @@ mod tests {
         // Check if the timestamp is recent (within the last minute)
         let timestamp = parsed.unwrap();
         let current = Local::now();
-        assert!(current.signed_duration_since(timestamp) < chrono::Duration::try_minutes(1).unwrap());
+        assert!(
+            current.signed_duration_since(timestamp) < chrono::Duration::try_minutes(1).unwrap()
+        );
     }
 
     #[test]
