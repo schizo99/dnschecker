@@ -10,8 +10,8 @@ use std::sync::Arc;
 
 mod vars;
 use crate::vars::*;
-
-fn main() {
+#[tokio::main]
+async fn main() {
     let sig_received = Arc::new(AtomicBool::new(false));
     let r = sig_received.clone();
 
@@ -27,7 +27,7 @@ fn main() {
     let mut counter: i32 = 1;
     loop {
         log::debug!("Looping");
-        counter = verify_ips(&hostname, &token, counter);
+        counter = verify_ips(&hostname, &token, counter).await;
         if sig_received.load(Ordering::SeqCst) {
             log::info!("Sig received, exiting!");
             break;
@@ -108,7 +108,7 @@ fn verify_env_vars() -> (String, String) {
 /// # Returns
 ///
 /// * A 32-bit integer that holds the updated counter.
-fn verify_ips(hostname: &String, token: &String, counter: i32) -> i32 {
+async fn verify_ips(hostname: &String, token: &String, counter: i32) -> i32 {
     // Log that IPs are being verified if counter is 0
     if counter == 0 {
         log::info!("Verifying IPs");
@@ -139,12 +139,12 @@ fn verify_ips(hostname: &String, token: &String, counter: i32) -> i32 {
         log::warn!("Since one of the IP addresses is empty, skipping comparison");
     } else if ip_address != wan_ip {
         log::info!("IP address is different");
-        if !token.is_empty() && !telegram::send_telegram(token, &ip_address, &wan_ip) {
+        if !token.is_empty() && !telegram::send_telegram(token, &ip_address, &wan_ip).await {
             log::warn!("Failed to send telegram");
         } else {
             log::info!("Telegram sent");
         }
-    } else if !telegram::send_telegram(token, &ip_address, &wan_ip) {
+    } else if !telegram::send_telegram(token, &ip_address, &wan_ip).await {
         log::warn!("Failed to send successful update telegram");
     }
 
