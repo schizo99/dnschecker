@@ -46,12 +46,16 @@ pub fn send_telegram(token: &str, router_ip: &str, dns_ip: &str) -> bool {
         log::info!("Sending alarm");
         if let Ok(response) = do_request(url, json) {
             if let Ok(response_text) = parse_response(response) {
+                log::debug!("Creating timestamp");
                 create_timestamp(&lockfile);
+                log::debug!("Parsing response");
                 parse_json(response_text)
             } else {
+                log::error!("Failed to parse response");
                 false
             }
         } else {
+            log::error!("Failed to send alarm");
             false
         }
     } else {
@@ -201,18 +205,21 @@ fn parse_response(response: reqwest::blocking::Response) -> Result<String, bool>
 fn do_request(url: String, json: Value) -> Result<reqwest::blocking::Response, bool> {
     let client = reqwest::blocking::Client::new();
     let timeout_duration = Duration::from_secs(10); // Set the timeout duration to 10 seconds
-    let response = client
-        .post(&url)
+    let request = client
+        .post(url)
         .json(&json)
         .timeout(timeout_duration)
-        .send();
-    let response = match response {
-        Ok(response) => response,
-        Err(e) => {
+        .build()
+        .map_err(|e| {
+            log::warn!("Failed to build request: {:?}", e);
+            true
+        })?;
+    let response = client
+        .execute(request)
+        .map_err(|e| {
             log::warn!("Failed to make HTTPS request: {:?}", e);
-            return Err(false);
-        }
-    };
+            true
+        })?;
     Ok(response)
 }
 

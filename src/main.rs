@@ -26,10 +26,13 @@ fn main() {
     let (hostname, token) = verify_env_vars();
     let mut counter: i32 = 1;
     loop {
+        log::debug!("Looping");
         counter = verify_ips(&hostname, &token, counter);
         if sig_received.load(Ordering::SeqCst) {
+            log::info!("Sig received, exiting!");
             break;
         }
+        log::debug!("Looping");
     }
 }
 
