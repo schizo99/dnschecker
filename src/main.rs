@@ -10,8 +10,7 @@ use std::sync::Arc;
 
 mod vars;
 use crate::vars::*;
-#[tokio::main]
-async fn main() {
+fn main() {
     let sig_received = Arc::new(AtomicBool::new(false));
     let r = sig_received.clone();
 
@@ -27,7 +26,9 @@ async fn main() {
     let mut counter: i32 = 1;
     loop {
         log::debug!("Looping");
-        counter = verify_ips(&hostname, &token, counter).await;
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+
+        counter = runtime.block_on(verify_ips(&hostname, &token, counter));
         if sig_received.load(Ordering::SeqCst) {
             log::info!("Sig received, exiting!");
             break;
