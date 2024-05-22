@@ -30,12 +30,18 @@ RUN RUSTFLAGS="-C target-feature=+crt-static" cargo build --release --target x86
 
 #RUN apt update && apt install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 
-FROM scratch
+# Second stage: Use Alpine Linux
+FROM alpine:latest
 
-#COPY --from=builder /usr/src/target/aarch64-unknown-linux-gnu/release/dnschecker /dnschecker
+# Install necessary runtime dependencies
+RUN apk update && apk add --no-cache openssl ca-certificates
+
+# Copy the binary from the builder stage
 COPY --from=builder /usr/src/target/x86_64-unknown-linux-gnu/release/dnschecker /dnschecker
 COPY --from=builder /etc/passwd /etc/passwd
 
+# Use the guest user
 USER guest
+
 # Set the binary as the entrypoint of the container
 ENTRYPOINT ["/dnschecker"]
