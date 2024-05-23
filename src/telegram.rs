@@ -29,6 +29,7 @@ use std::time::Duration;
 /// * If the function fails, it returns `false`.
 pub fn send_telegram(token: &str, router_ip: &str, dns_ip: &str) -> bool {
     let lockfile = env::var("LOCKFILE").unwrap_or("/tmp/telegram.lock".to_string());
+    let ok_lockfile = env::var("LOCKFILE").unwrap_or("/tmp/telegram_ok.lock".to_string());
     let chat_id = get_var_from_env("CHAT_ID").unwrap();
     let url = format!("https://api.telegram.org/bot{}/sendMessage", &token);
     let text = format!(
@@ -37,12 +38,13 @@ pub fn send_telegram(token: &str, router_ip: &str, dns_ip: &str) -> bool {
     );
     let json = serde_json::json!({"chat_id": chat_id, "text": text, "disable_notification": false});
 
-    let alarm_sent = read_timestamp_from_file(&lockfile);
-
+    let alarm_sent = read_timestamp_from_file(&lockfile, 6);
+    let ok_sent = read_timestamp_from_file(&ok_lockfile, 1);
     if alarm_sent && router_ip == dns_ip {
         log::debug!("IP addresses are the same again, resetting alarm");
+        create_timestamp(&ok_lockfile);
         reset_alarm(&lockfile, &chat_id, url).is_ok()
-    } else if !alarm_sent && router_ip != dns_ip {
+    } else if !alarm_sent && router_ip != dns_ip && !ok_sent {
         log::info!("Sending alarm");
         if let Ok(response) = do_request(url, json) {
             if let Ok(response_text) = parse_response(response) {
@@ -290,7 +292,7 @@ fn reset_lockfile(lockfile: &str) -> Result<String, String> {
 /// # Returns
 ///
 /// * A `bool` that indicates whether the timestamp is less than 24 hours old.
-pub fn read_timestamp_from_file(lockfile: &str) -> bool {
+pub fn read_timestamp_from_file(lockfile: &str, hours: i64) -> bool {
     if let Ok(mut file) = File::open(lockfile) {
         let mut contents = String::new();
         let readtimestamp = file.read_to_string(&mut contents);
@@ -302,7 +304,8 @@ pub fn read_timestamp_from_file(lockfile: &str) -> bool {
 
         if let Ok(timestamp) = DateTime::parse_from_rfc2822(&contents) {
             let current = Local::now();
-            if current.signed_duration_since(timestamp) < ChronoDuration::try_hours(24).unwrap() {
+            if current.signed_duration_since(timestamp) < ChronoDuration::try_hours(hours).unwrap()
+            {
                 log::info!("Less than 24 hours since last alarm, not sending alarm!");
                 true
             } else {
@@ -438,7 +441,7 @@ mod tests {
         writeln!(file, "{}", timestamp_old).unwrap();
 
         // Call the function with the temporary file
-        let result_old = read_timestamp_from_file(&file_path);
+        let result_old = read_timestamp_from_file(&file_path, 24);
 
         // Assert that the function returns false (because the timestamp is more than 24 hours ago)
         assert_eq!(result_old, false);
@@ -453,7 +456,7 @@ mod tests {
         file.write_all(timestamp.as_bytes()).unwrap();
 
         // Call the function with the temporary file again
-        let result_new = read_timestamp_from_file(&file_path);
+        let result_new = read_timestamp_from_file(&file_path, 24);
 
         // Assert that the function returns true (because the timestamp is within 24 hours)
         assert_eq!(result_new, true);
