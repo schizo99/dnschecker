@@ -304,7 +304,8 @@ pub fn read_timestamp_from_file(lockfile: &str, hours: i64) -> bool {
 
         if let Ok(timestamp) = DateTime::parse_from_rfc2822(&contents) {
             let current = Local::now();
-            if current.signed_duration_since(timestamp) < ChronoDuration::try_hours(hours).unwrap() {
+            if current.signed_duration_since(timestamp) < ChronoDuration::try_hours(hours).unwrap()
+            {
                 log::info!("Less than 24 hours since last alarm, not sending alarm!");
                 true
             } else {
