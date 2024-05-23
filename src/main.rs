@@ -136,7 +136,7 @@ fn verify_ips(hostname: &String, token: &String, counter: i32) -> i32 {
         log::warn!("Since one of the IP addresses is empty, skipping comparison");
     } else if ip_address != wan_ip {
         log::info!("IP address is different");
-        if !token.is_empty() && !telegram::send_telegram(token, &ip_address, &wan_ip) {
+        if !token.is_empty() && !telegram::send_telegram(token, &wan_ip, &ip_address) {
             log::warn!("Failed to send telegram");
         } else {
             log::info!("Telegram sent");
@@ -147,7 +147,7 @@ fn verify_ips(hostname: &String, token: &String, counter: i32) -> i32 {
 
     // Sleep for 10 seconds
     log::debug!("Sleeping for 10 seconds");
-    sleep(Duration::new(1, 0));
+    sleep(Duration::new(10, 0));
 
     // Increment the counter
     let counter: i32 = counter + 1;

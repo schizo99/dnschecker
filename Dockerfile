@@ -31,11 +31,10 @@ RUN RUSTFLAGS="-C target-feature=+crt-static" cargo build --release --target x86
 #RUN apt update && apt install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 
 # Second stage: Use Alpine Linux
-FROM alpine:latest
+FROM ubuntu
 
 # Install necessary runtime dependencies
-RUN apk update && apk add --no-cache openssl ca-certificates
-
+RUN apt update && apt install -y ca-certificates
 # Copy the binary from the builder stage
 COPY --from=builder /usr/src/target/x86_64-unknown-linux-gnu/release/dnschecker /dnschecker
 COPY --from=builder /etc/passwd /etc/passwd
