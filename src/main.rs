@@ -143,7 +143,6 @@ fn verify_ips(hostname: &String, token: &String, counter: i32) -> i32 {
         } else if !telegram::send_telegram(token, &ip_address, &wan_ip) {
             log::warn!("Failed to send successful update telegram");
         }
-
     }
     // Sleep for 10 seconds
     log::debug!("Sleeping for 1 seconds");
