@@ -107,51 +107,50 @@ fn verify_env_vars() -> (String, String) {
 /// * A 32-bit integer that holds the updated counter.
 fn verify_ips(hostname: &String, token: &String, counter: i32) -> i32 {
     // Log that IPs are being verified if counter is 0
-    if counter == 0 {
+    if counter % 10 == 0 {
         log::info!("Verifying IPs");
-    }
 
-    // Resolve the hostname to an IP address
-    let ip_address = dns::resolve_hostname(hostname);
-    if ip_address.is_empty() {
-        log::warn!("Failed to get IP address");
-    }
-
-    // Retrieve the WAN IP address
-    let wan_ip = api::get_api();
-    if wan_ip.is_empty() {
-        log::warn!("Failed to get WAN IP address");
-    }
-
-    // Log the IP addresses
-    log::debug!(
-        "The IP address of {} is: {}, WAN IP address is: {}",
-        hostname,
-        ip_address,
-        wan_ip
-    );
-
-    // Compare the IP addresses
-    if ip_address.is_empty() || wan_ip.is_empty() {
-        log::warn!("Since one of the IP addresses is empty, skipping comparison");
-    } else if ip_address != wan_ip {
-        log::info!("IP address is different");
-        if !token.is_empty() && !telegram::send_telegram(token, &wan_ip, &ip_address) {
-            log::warn!("Failed to send telegram");
-        } else {
-            log::info!("Telegram sent");
+        // Resolve the hostname to an IP address
+        let ip_address = dns::resolve_hostname(hostname);
+        if ip_address.is_empty() {
+            log::warn!("Failed to get IP address");
         }
-    } else if !telegram::send_telegram(token, &ip_address, &wan_ip) {
-        log::warn!("Failed to send successful update telegram");
+
+        // Retrieve the WAN IP address
+        let wan_ip = api::get_api();
+        if wan_ip.is_empty() {
+            log::warn!("Failed to get WAN IP address");
+        }
+
+        // Log the IP addresses
+        log::debug!(
+            "The IP address of {} is: {}, WAN IP address is: {}",
+            hostname,
+            ip_address,
+            wan_ip
+        );
+
+        // Compare the IP addresses
+        if ip_address.is_empty() || wan_ip.is_empty() {
+            log::warn!("Since one of the IP addresses is empty, skipping comparison");
+        } else if ip_address != wan_ip {
+            log::info!("IP address is different");
+            if !token.is_empty() && !telegram::send_telegram(token, &wan_ip, &ip_address) {
+                log::warn!("Failed to send telegram");
+            } else {
+                log::info!("Telegram sent");
+            }
+        } else if !telegram::send_telegram(token, &ip_address, &wan_ip) {
+            log::warn!("Failed to send successful update telegram");
+        }
+
     }
-
     // Sleep for 10 seconds
-    log::debug!("Sleeping for 10 seconds");
-    sleep(Duration::new(10, 0));
-
+    log::debug!("Sleeping for 1 seconds");
+    sleep(Duration::new(1, 0));
     // Increment the counter
     let counter: i32 = counter + 1;
-    if counter >= 180 {
+    if counter >= 1800 {
         log::info!("30 minutes passed");
         return 1;
     }
