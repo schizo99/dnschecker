@@ -21,5 +21,5 @@ mockito = "1.2.0"
 url = "2.5.0"
 http = "1.0.0"
 shuteye = "0.3.3"
-signal-hook = "0.3.17"
+signal-hook = "0.4.1"
 
